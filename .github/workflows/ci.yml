@@ -58,6 +58,12 @@ jobs:
       - name: Bump deployment target to 12.0
         run: |
           find . -name project.pbxproj -exec sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 11\.0/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' {} +
+
+      - name: Patch Roots.m to avoid block-based KVO
+        if: matrix.kernel == 'linux'
+        run: |
+          # 注释掉 observe:options:owner:usingBlock: 调用，防止崩溃
+          find . -name "Roots.m" -exec sed -i '' 's/\[\(.*\) observe:\(.*\) options:\(.*\) owner:\(.*\) usingBlock:\(.*\)\]/\/\/ DISABLED: &/' {} +
      
       - name: Clone Linux
         if: matrix.kernel == 'linux'
