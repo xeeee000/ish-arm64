@@ -96,12 +96,27 @@ jobs:
           name: iSH-unsigned-ipaj
           path: iSH-unsigned.ipa
 
-      - name: Build (linux kernel) for device
+      - name: Fix missing generic_mkdirat for device
+        if: matrix.kernel == 'linux'
+        run: |
+          cat > /tmp/generic_mkdirat.c << 'EOF'
+          #include <sys/stat.h>
+          #include <unistd.h>
+          int generic_mkdirat(int dirfd, const char *pathname, mode_t mode) {
+              return mkdirat(dirfd, pathname, mode);
+          }
+          EOF
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          TARGET="arm64-apple-ios12.0"    # 注意：没有 -simulator
+          clang -c -target $TARGET -isysroot $SDK_PATH /tmp/generic_mkdirat.c -o /tmp/generic_mkdirat_device.o
+
+      - name: Build (linux kernel) with fixed object
         if: matrix.kernel == 'linux'
         run: |
           xcodebuild -project iSH.xcodeproj -scheme iSH+Linux \
             -arch arm64 -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_LDFLAGS="/tmp/generic_mkdirat_device.o"
 
       - name: Package unsigned .ipa
         if: matrix.kernel == 'ish'
