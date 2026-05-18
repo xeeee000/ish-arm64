@@ -133,6 +133,11 @@ jobs:
           clang -c -target arm64-apple-ios12.0 -isysroot $SDK_PATH \
             /tmp/generic_mkdirat.c -o /tmp/generic_mkdirat_device.o
 
+      - name: Clean all caches
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/Library/Caches/CocoaPods
+
       - name: Build (linux kernel) for device
         if: matrix.kernel == 'linux'
         run: |
@@ -140,8 +145,9 @@ jobs:
             -arch arm64 -sdk iphoneos \
             -configuration DebugLinux \
             CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             OTHER_LDFLAGS="/tmp/generic_mkdirat_device.o"
-
+            
       - name: Package unsigned .ipa (linux)
         if: matrix.kernel == 'linux'
         run: |
