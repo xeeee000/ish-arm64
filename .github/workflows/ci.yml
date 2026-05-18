@@ -119,7 +119,7 @@ jobs:
             OTHER_LDFLAGS="/tmp/generic_mkdirat_device.o"
 
       - name: Package unsigned .ipa
-        if: matrix.kernel == 'ish'
+        if: matrix.kernel == 'linux'
         run: |
           # 用 xcodebuild -showBuildSettings 获取 BUILT_PRODUCTS_DIR
           eval $(xcodebuild -project iSH.xcodeproj -scheme iSH -sdk iphoneos \
@@ -133,7 +133,7 @@ jobs:
           rm -rf Payload
 
       - name: Upload IPA
-        if: matrix.kernel == 'ish'
+        if: matrix.kernel == 'linux'
         uses: actions/upload-artifact@v4
         with:
           name: iSH-unsigned1-ipa
