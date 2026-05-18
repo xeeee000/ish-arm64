@@ -93,7 +93,7 @@ jobs:
         if: matrix.kernel == 'ish'
         uses: actions/upload-artifact@v4
         with:
-          name: iSH-unsigned-ipa
+          name: iSH-unsigned-ipaj
           path: iSH-unsigned.ipa
 
       - name: Build (linux kernel) for device
