@@ -110,13 +110,28 @@ jobs:
           TARGET="arm64-apple-ios12.0"    # 注意：没有 -simulator
           clang -c -target $TARGET -isysroot $SDK_PATH /tmp/generic_mkdirat.c -o /tmp/generic_mkdirat_device.o
 
-      - name: Build (linux kernel)
+# 替换原来的 Build (linux kernel) 步骤
+      - name: Fix missing generic_mkdirat (device)
+        if: matrix.kernel == 'linux'
+        run: |
+          cat > /tmp/generic_mkdirat.c << 'EOF'
+          #include <sys/stat.h>
+          #include <unistd.h>
+          int generic_mkdirat(int dirfd, const char *pathname, mode_t mode) {
+              return mkdirat(dirfd, pathname, mode);
+          }
+          EOF
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          clang -c -target arm64-apple-ios12.0 -isysroot $SDK_PATH \
+            /tmp/generic_mkdirat.c -o /tmp/generic_mkdirat_device.o
+
+      - name: Build (linux kernel) for device
         if: matrix.kernel == 'linux'
         run: |
           xcodebuild -project iSH.xcodeproj -scheme iSH+Linux \
             -arch arm64 -sdk iphoneos \
             -configuration DebugLinux \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
             OTHER_LDFLAGS="/tmp/generic_mkdirat_device.o"
 
       - name: Package unsigned .ipa (linux)
