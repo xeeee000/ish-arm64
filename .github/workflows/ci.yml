@@ -96,10 +96,30 @@ jobs:
           name: iSH-unsigned-ipa
           path: iSH-unsigned.ipa
 
-      - name: Build (linux kernel)
+      - name: Build (linux kernel) for device
         if: matrix.kernel == 'linux'
         run: |
           xcodebuild -project iSH.xcodeproj -scheme iSH+Linux \
-            -arch arm64 -sdk iphonesimulator \
-            CODE_SIGNING_ALLOWED=NO \
-            OTHER_LDFLAGS="/tmp/generic_mkdirat.o"   # 链接时把这个 .o 加进去
+            -arch arm64 -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package unsigned .ipa
+        if: matrix.kernel == 'ish'
+        run: |
+          # 用 xcodebuild -showBuildSettings 获取 BUILT_PRODUCTS_DIR
+          eval $(xcodebuild -project iSH.xcodeproj -scheme iSH -sdk iphoneos \
+            -showBuildSettings | grep -E '^\s*BUILT_PRODUCTS_DIR|^\s*FULL_PRODUCT_NAME' | \
+            sed 's/^[[:space:]]*//' | sed 's/ = /=/' | tr -d '\r')
+          APP_PATH="$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME"
+          echo "App is at $APP_PATH"
+          mkdir Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r iSH-unsigned.ipa Payload
+          rm -rf Payload
+
+      - name: Upload IPA
+        if: matrix.kernel == 'ish'
+        uses: actions/upload-artifact@v4
+        with:
+          name: iSH-unsigned-ipa
+          path: iSH-unsigned.ipa
