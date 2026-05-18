@@ -38,23 +38,47 @@ jobs:
         run: ninja -C build test
 
   build-mac:
-    runs-on: macos-26
+    runs-on: macos-latest   # 记得把 macos-26 改掉！
     strategy:
       matrix:
         kernel: [ish, linux]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
-            submodules: true
+          submodules: true
+
       - name: Install dependencies
         run: |
           brew install llvm lld ninja libarchive meson
+
       - name: Clone Linux
         if: matrix.kernel == 'linux'
         run: deps/clone-linux.sh
-      - name: Build
+
+      # ★ 关键修复步骤 ★
+      - name: Fix missing generic_mkdirat for simulator
+        if: matrix.kernel == 'linux'
+        run: |
+          cat > /tmp/generic_mkdirat.c << 'EOF'
+          #include <sys/stat.h>
+          #include <unistd.h>
+          int generic_mkdirat(int dirfd, const char *pathname, mode_t mode) {
+              return mkdirat(dirfd, pathname, mode);
+          }
+          EOF
+          # 获取模拟器 SDK 路径和最低部署目标
+          SDK_PATH=$(xcrun --sdk iphonesimulator --show-sdk-path)
+          TARGET="arm64-apple-ios12.0-simulator"   # 目标改成 12.0，消除警告
+          clang -c -target $TARGET -isysroot $SDK_PATH /tmp/generic_mkdirat.c -o /tmp/generic_mkdirat.o
+
+      - name: Build (ish kernel)
         if: matrix.kernel == 'ish'
         run: xcodebuild -project iSH.xcodeproj -scheme iSH -arch arm64 -sdk iphoneos CODE_SIGNING_ALLOWED=NO
-      - name: Build
+
+      - name: Build (linux kernel)
         if: matrix.kernel == 'linux'
-        run: xcodebuild -project iSH.xcodeproj -scheme iSH+Linux -arch arm64 -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO
+        run: |
+          xcodebuild -project iSH.xcodeproj -scheme iSH+Linux \
+            -arch arm64 -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_LDFLAGS="/tmp/generic_mkdirat.o"   # 链接时把这个 .o 加进去
