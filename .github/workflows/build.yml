@@ -5,15 +5,28 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
-      - run: brew install ninja lld llvm meson
-      - run: meson setup build-arm64 -Dguest_arch=arm64 --buildtype=release
+      - run: sudo apt-get update && sudo apt-get install -y meson ninja-build gcc-aarch64-linux-gnu
+      - run: |
+          cat > cross.txt << 'EOF'
+          [binaries]
+          c = 'aarch64-linux-gnu-gcc'
+          ar = 'aarch64-linux-gnu-ar'
+          strip = 'aarch64-linux-gnu-strip'
+          [host_machine]
+          system = 'linux'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+          EOF
+      - run: meson setup build-arm64 -Dguest_arch=arm64 --buildtype=release --cross-file cross.txt
       - run: ninja -C build-arm64 ish
       - uses: actions/upload-artifact@v4
         with:
           name: iSH-ARM64-编译完成
           path: build-arm64/ish
+          
