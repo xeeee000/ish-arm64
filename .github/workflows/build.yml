@@ -5,12 +5,12 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
         with:
-          submodules: recursive
-      - run: brew install meson ninja llvm
+          submodules: true
+      - run: brew install ninja lld llvm meson
       - run: meson setup build-arm64 -Dguest_arch=arm64 --buildtype=release
       - run: ninja -C build-arm64 ish
       - uses: actions/upload-artifact@v4
